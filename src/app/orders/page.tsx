@@ -1,103 +1,93 @@
+import Image from "next/image";
 import Link from "next/link";
-import { Price } from "@/components/prefs";
-import { getCurrentUser } from "@/lib/auth";
-import { getOrdersForUser } from "@/lib/orders";
-import { getDict } from "@/lib/i18n";
-import { getPrefs } from "@/lib/locale";
-import { orderStatusLabel } from "@/lib/format";
+import type { Metadata } from "next";
+import StatusBadge from "@/components/StatusBadge";
+import { listOrdersForSession } from "@/lib/queries";
+import { getSessionId } from "@/lib/session";
+import { formatAmount, formatDate, formatUsd } from "@/lib/format";
+import { getPaymentMethod } from "@/lib/payments";
 
+export const metadata: Metadata = { title: "My Orders" };
 export const dynamic = "force-dynamic";
 
 export default async function OrdersPage() {
-  const [{ locale }, user] = await Promise.all([getPrefs(), getCurrentUser()]);
-  const dict = getDict(locale);
-  const km = locale === "km";
+  const sid = await getSessionId();
+  const rows = await listOrdersForSession(sid);
 
-  if (!user) {
-    return (
-      <div className="mx-auto max-w-lg px-4 py-16">
-        <div className="kt-card p-8 text-center">
-          <span className="mx-auto grid h-12 w-12 place-items-center rounded-full bg-[var(--acc-soft)] text-[var(--acc)]">
-            🔐
-          </span>
-          <h1 className="kt-khmer mt-3 text-lg font-extrabold">
-            {km ? "សូមចូលដើម្បីមើលការបញ្ជាទិញ" : "Log in to view your orders"}
-          </h1>
-          <div className="mt-4 flex justify-center gap-2">
-            <Link href="/login" className="kt-btn kt-btn-primary kt-khmer px-4 py-2.5 text-sm">
-              {dict.login}
-            </Link>
-            <Link href="/register" className="kt-btn kt-btn-ghost kt-khmer px-4 py-2.5 text-sm">
-              {dict.register}
-            </Link>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  const orders = await getOrdersForUser(user.id);
+  const totalSpent = rows.reduce((sum, r) => sum + Number(r.order.amountUsd), 0);
 
   return (
-    <div className="mx-auto max-w-4xl px-4 py-8 sm:px-6">
-      <div className="flex flex-wrap items-end justify-between gap-2">
+    <div>
+      <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <h1 className="kt-khmer text-[22px] font-extrabold">{dict.navOrders}</h1>
-          <p className="kt-khmer mt-1 text-[12.5px] text-[var(--muted)]">
-            {user.name} · {user.email}
-          </p>
+          <p className="text-xs font-semibold uppercase tracking-widest text-brand-400">Account</p>
+          <h1 className="text-2xl font-bold text-white">My orders</h1>
+          <p className="mt-1 text-sm text-slate-400">Every top-up placed from this device, newest first.</p>
         </div>
-        <Link href="/games" className="kt-btn kt-btn-primary kt-khmer px-4 py-2.5 text-[12.5px]">
-          {dict.topUpNow}
-        </Link>
+        {rows.length > 0 && (
+          <div className="flex gap-3">
+            <Stat label="Orders" value={String(rows.length)} />
+            <Stat label="Total spent" value={formatUsd(totalSpent)} />
+          </div>
+        )}
       </div>
 
-      {orders.length === 0 ? (
-        <div className="mt-6 rounded-2xl border border-dashed border-[var(--line)] bg-[var(--bg2)] py-14 text-center">
-          <p className="kt-khmer text-[13px] text-[var(--muted)]">
-            {km ? "មិនមានការបញ្ជាទិញនៅឡើយទេ។" : "No orders yet."}
+      {rows.length === 0 ? (
+        <div className="card-glow rounded-3xl border border-dashed border-white/10 bg-ink-800/40 p-12 text-center">
+          <div className="mx-auto grid h-14 w-14 place-items-center rounded-full bg-brand-500/10 text-2xl">🧾</div>
+          <h2 className="mt-4 text-lg font-semibold text-white">No orders yet</h2>
+          <p className="mx-auto mt-2 max-w-sm text-sm text-slate-400">
+            Once you complete a top-up it will show up here with its status and details.
           </p>
-          <Link href="/games" className="kt-khmer mt-3 inline-block text-[12.5px] font-bold text-[var(--acc)] hover:underline">
-            {km ? "ចាប់ផ្តើមថបអាប់ →" : "Start top-up →"}
+          <Link
+            href="/#games"
+            className="mt-6 inline-flex rounded-full bg-gradient-to-r from-brand-400 to-brand-600 px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-brand-500/25"
+          >
+            Start a top-up
           </Link>
         </div>
       ) : (
-        <ul className="mt-5 space-y-2.5">
-          {orders.map((order) => (
+        <ul className="space-y-3">
+          {rows.map(({ order, game, pkg }) => (
             <li key={order.id}>
               <Link
-                href={`/order/${order.code}`}
-                className="kt-card flex flex-wrap items-center gap-3 p-4 transition hover:-translate-y-0.5 hover:shadow-[var(--shadow-lg)]"
+                href={`/orders/${order.id}`}
+                className="card-glow flex items-center gap-4 rounded-2xl border border-white/5 bg-ink-800/70 p-4 transition hover:border-brand-400/40"
               >
+                <div className="relative h-14 w-14 shrink-0 overflow-hidden rounded-xl">
+                  <Image src={game.imageUrl} alt={game.name} fill sizes="56px" className="object-cover" />
+                </div>
                 <div className="min-w-0 flex-1">
-                  <p className="truncate text-[13px] font-extrabold">{order.gameName}</p>
-                  <p className="kt-khmer mt-0.5 truncate text-[11.5px] text-[var(--muted)]">
-                    {order.packageName} · {order.playerId}
-                    {order.serverId ? ` (${order.serverId})` : ""}
+                  <div className="flex flex-wrap items-center gap-2">
+                    <p className="truncate text-sm font-semibold text-white">{game.name}</p>
+                    <StatusBadge status={order.status} />
+                  </div>
+                  <p className="mt-0.5 truncate text-xs text-slate-400">
+                    {formatAmount(pkg.amount, pkg.bonus, pkg.name)} · {game.playerIdLabel} {order.playerId}
+                    {order.zoneId ? ` (${order.zoneId})` : ""}
                   </p>
-                  <p className="mt-1 font-mono text-[10.5px] text-[var(--muted)]">
-                    {order.code} · {new Date(order.createdAt).toLocaleString(km ? "km-KH" : "en-US")}
+                  <p className="mt-0.5 text-[11px] text-slate-500">
+                    {order.orderNo} · {formatDate(order.createdAt)} · {getPaymentMethod(order.paymentMethod)?.name}
                   </p>
                 </div>
-                <div className="text-right">
-                  <Price cents={order.amountCents} className="text-[14px] font-extrabold" />
-                  <p
-                    className={`kt-khmer mt-1 inline-block rounded-full px-2 py-0.5 text-[10px] font-bold ${
-                      order.status === "paid"
-                        ? "bg-[#e9f9ef] text-[var(--ok)]"
-                        : order.status === "pending"
-                          ? "bg-[#fffbeb] text-[var(--amber)]"
-                          : "bg-[#fff1f1] text-[var(--err)]"
-                    }`}
-                  >
-                    {orderStatusLabel(order.status, locale)}
-                  </p>
+                <div className="shrink-0 text-right">
+                  <p className="text-base font-bold text-white">{formatUsd(order.amountUsd)}</p>
+                  <p className="text-xs text-brand-300">Details →</p>
                 </div>
               </Link>
             </li>
           ))}
         </ul>
       )}
+    </div>
+  );
+}
+
+function Stat({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-xl border border-white/5 bg-ink-800/70 px-4 py-2.5">
+      <p className="text-[11px] uppercase tracking-wider text-slate-400">{label}</p>
+      <p className="text-lg font-bold text-white">{value}</p>
     </div>
   );
 }

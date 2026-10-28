@@ -2,20 +2,18 @@ import Link from "next/link";
 
 export default function NotFound() {
   return (
-    <div className="mx-auto max-w-lg px-4 py-20 text-center">
-      <p className="text-[64px] font-extrabold leading-none text-[#e8f1ff]">404</p>
-      <h1 className="kt-khmer mt-2 text-[22px] font-extrabold">រកមិនឃើញទំព័រនេះទេ</h1>
-      <p className="kt-khmer mt-1.5 text-[13px] text-[var(--muted)]">
-        Page not found — សូមត្រឡប់ទៅទំព័រដើម ឬជ្រើសរើសហ្គេមរបស់អ្នក។
+    <div className="card-glow mx-auto mt-10 max-w-md rounded-3xl border border-white/5 bg-ink-800/60 p-10 text-center">
+      <p className="text-6xl font-black text-white/10">404</p>
+      <h1 className="mt-2 text-xl font-bold text-white">We couldn&apos;t find that page</h1>
+      <p className="mt-2 text-sm text-slate-400">
+        The game or order you&apos;re looking for doesn&apos;t exist or isn&apos;t available on this device.
       </p>
-      <div className="mt-5 flex justify-center gap-2">
-        <Link href="/" className="kt-btn kt-btn-primary kt-khmer px-4 py-2.5 text-[13px]">
-          ទំព័រដើម
-        </Link>
-        <Link href="/games" className="kt-btn kt-btn-ghost kt-khmer px-4 py-2.5 text-[13px]">
-          ហ្គេមទាំងអស់
-        </Link>
-      </div>
+      <Link
+        href="/"
+        className="mt-6 inline-flex rounded-full bg-gradient-to-r from-brand-400 to-brand-600 px-5 py-2.5 text-sm font-semibold text-white"
+      >
+        Back to home
+      </Link>
     </div>
   );
 }

@@ -1,42 +1,28 @@
-export const USD_TO_KHR = 4100;
+export const KHR_RATE = 4100;
 
-export type Currency = "USD" | "KHR";
-export type Locale = "km" | "en";
-
-export function rielFromCents(cents: number): number {
-  // 1 USD = 4,100 KHR — kept exactly in sync with the KHQR amount.
-  return Math.round((cents / 100) * USD_TO_KHR);
+export function formatUsd(value: string | number): string {
+  const n = typeof value === "string" ? Number(value) : value;
+  return `$${n.toFixed(2)}`;
 }
 
-export function amountForCurrency(cents: number, currency: Currency): number {
-  if (currency === "KHR") return rielFromCents(cents);
-  return cents / 100;
+export function formatKhr(value: string | number): string {
+  const n = typeof value === "string" ? Number(value) : value;
+  return `៛${Math.round(n * KHR_RATE).toLocaleString("en-US")}`;
 }
 
-export function formatMoney(cents: number, currency: Currency = "USD"): string {
-  if (currency === "KHR") {
-    return `៛${rielFromCents(cents).toLocaleString("en-US")}`;
-  }
-  return `$${(cents / 100).toFixed(2)}`;
+export function formatDate(date: Date | string): string {
+  const d = typeof date === "string" ? new Date(date) : date;
+  return d.toLocaleString("en-US", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
 }
 
-export function formatUsd(cents: number): string {
-  return `$${(cents / 100).toFixed(2)}`;
-}
-
-export function maskPlayer(value: string): string {
-  const str = value.replace(/\s+/g, "");
-  if (str.length <= 4) return `${str.slice(0, 1)}**${str.slice(-1)}`;
-  return `${str.slice(0, 4)}**${str.slice(-3)}`;
-}
-
-export function orderStatusLabel(status: string, locale: Locale = "km"): string {
-  const map: Record<string, [string, string]> = {
-    pending: ["រង់ចាំការបង់ប្រាក់", "Awaiting payment"],
-    paid: ["បានបង់ប្រាក់", "Paid"],
-    expired: ["ផុតកំណត់", "Expired"],
-    failed: ["បរាជ័យ", "Failed"],
-  };
-  const entry = map[status] ?? [status, status];
-  return locale === "km" ? entry[0] : entry[1];
+export function formatAmount(amount: number, bonus: number, currency: string) {
+  if (amount === 1 && !bonus) return currency;
+  const base = amount.toLocaleString("en-US");
+  return bonus > 0 ? `${base} + ${bonus.toLocaleString("en-US")} ${currency}` : `${base} ${currency}`;
 }
